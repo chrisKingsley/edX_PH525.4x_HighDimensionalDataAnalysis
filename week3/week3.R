@@ -61,3 +61,56 @@ rowVars <- apply(x, 1, var)
 var.idx <- order(rowVars, decreasing=T)[1:50]
 heatmap.2(x[var.idx,], ColSideColors=as.character(g),
           main="Feature Selection by Variance")
+
+
+# Conditional Expectation Exercises #1
+n = 10000
+set.seed(1)
+men = rnorm(n,176,7) #height in centimeters
+women = rnorm(n,162,7) #height in centimeters
+y = c(rep(0,n),rep(1,n))
+x = round(c(men,women))
+##mix it up
+ind = sample(seq(along=y))
+y = y[ind]
+x = x[ind]
+
+idx.176 <- which(x==176)
+mean(y[idx.176])
+
+
+# Conditional Expectation Exercises #2
+prob.female <- sapply(160:178, function(height) mean(y[x==height]))
+plot(160:178, prob.female, las=3)
+abline(h=0.5, col="red", lty="dashed")
+(160:178)[which(prob.female > 0.5)]
+
+
+# Smoothing Exercises #1
+set.seed(5)
+N = 250
+ind = sample(length(y),N)
+Y = y[ind]
+X = x[ind]
+
+loess.model <- loess(Y ~ X)
+predict(loess.model, 168)
+
+
+# Smoothing Exercises #2
+set.seed(5)
+numPerms <- 1000
+predicted.vals <- rep(NA, numPerms)
+for(i in 1:numPerms) {
+    N = 250
+    ind = sample(length(y),N)
+    Y = y[ind]
+    X = x[ind]
+    
+    loess.model <- loess(Y ~ X)
+    predicted.vals[i] <- predict(loess.model, 168)
+}
+sd(predicted.vals)
+
+
+# kNN and Cross Validation Exercises #1
