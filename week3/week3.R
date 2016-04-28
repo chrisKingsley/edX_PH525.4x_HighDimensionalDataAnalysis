@@ -1,4 +1,5 @@
 # week 3
+library(genefilter)
 
 
 # Hiearchichal Clustering Exercises #1
@@ -114,3 +115,118 @@ sd(predicted.vals)
 
 
 # kNN and Cross Validation Exercises #1
+library(caret)
+
+y <- factor(sampleInfo$group)
+X <- t(geneExpression)
+out <- which(geneAnnotation$CHR %in% c("chrX","chrY"))
+X <- X[,-out]
+
+set.seed(1)
+folds <- createFolds(y, 10)
+folds[[3]][2]
+
+
+# kNN and Cross Validation Exercises #2
+library(class)
+
+train.idx <- unlist(folds[-2])
+gene.t.tests <- colttests(X[train.idx, ], y[train.idx])
+t.idx <- order(gene.t.tests$p.value)[1:8]
+
+res <- knn(X[train.idx, t.idx], X[-train.idx, t.idx], y[train.idx], k=5)
+sum(res!=y[-train.idx])
+
+
+# kNN and Cross Validation Exercises #3
+set.seed(1)
+m <- 8
+k <- 5
+numErrors <- 0
+for(i in 1:length(folds)) {
+    train.idx <- unlist(folds[-i])
+    gene.t.tests <- colttests(X[train.idx, ], y[train.idx])
+    t.idx <- order(gene.t.tests$p.value)[1:m]
+    
+    res <- knn(train=X[train.idx, t.idx], test=X[-train.idx, t.idx],
+               cl=y[train.idx], k=k)
+    numErrors <- numErrors + sum(res!=y[-train.idx])
+}
+numErrors/length(y)
+
+
+# kNN and Cross Validation Exercises #4
+paramErrors <- expand.grid(k=seq(1,9,2), m=2^c(1:11))
+
+for(i in 1:nrow(paramErrors)) {
+    numErrors <- 0
+    
+    for(j in 1:length(folds)) {
+        train.idx <- unlist(folds[-j])
+        gene.t.tests <- colttests(X[train.idx, ], y[train.idx])
+        t.idx <- order(gene.t.tests$p.value)[1:paramErrors$m[i]]
+        
+        res <- knn(train=X[train.idx, t.idx], test=X[-train.idx, t.idx],
+                   cl=y[train.idx], k=paramErrors$k[i])
+        numErrors <- numErrors + sum(res!=y[-train.idx])
+    }
+    
+    paramErrors[i, "error"] <- numErrors/length(y)
+}
+paramErrors[paramErrors$error==min(paramErrors$error),]
+
+
+# kNN and Cross Validation Exercises #5
+paramErrors <- expand.grid(k=seq(1,9,2), m=2^c(1:11))
+
+for(i in 1:nrow(paramErrors)) {
+    numErrors <- 0
+    gene.t.tests <- colttests(X, y)
+    t.idx <- order(gene.t.tests$p.value)[1:paramErrors$m[i]]
+    
+    for(j in 1:length(folds)) {
+        train.idx <- unlist(folds[-j])
+        res <- knn(train=X[train.idx, t.idx], test=X[-train.idx, t.idx],
+                   cl=y[train.idx], k=paramErrors$k[i])
+        numErrors <- numErrors + sum(res!=y[-train.idx])
+    }
+    
+    paramErrors[i, "error"] <- numErrors/length(y)
+}
+paramErrors[paramErrors$error==min(paramErrors$error),]
+
+
+# kNN and Cross Validation Exercises #6
+paramErrors <- expand.grid(k=seq(1,9,2), m=2^c(1:11))
+y2 <- factor(as.numeric(format( sampleInfo$date, "%m")=="06"))
+
+for(i in 1:nrow(paramErrors)) {
+    numErrors <- 0
+    
+    for(j in 1:length(folds)) {
+        train.idx <- unlist(folds[-j])
+        gene.t.tests <- colttests(X[train.idx, ], y2[train.idx])
+        t.idx <- order(gene.t.tests$p.value)[1:paramErrors$m[i]]
+        
+        res <- knn(train=X[train.idx, t.idx], test=X[-train.idx, t.idx],
+                   cl=y2[train.idx], k=paramErrors$k[i])
+        numErrors <- numErrors + sum(res!=y2[-train.idx])
+    }
+    
+    paramErrors[i, "error"] <- numErrors/length(y2)
+}
+paramErrors[paramErrors$error==min(paramErrors$error),]
+
+
+# differences between colttests and t.test - need to specify equal variances
+# in t.test function
+train.idx <- unlist(folds[-2])
+coltTests <- apply(X, 2, function(z) t.test(z[train.idx] ~ y[train.idx],
+                                            var.equal=T)$p.val)
+t.idx <- order(coltTests)
+
+gene.t.tests <- colttests(X[train.idx, ], y[train.idx])
+t.idx2 <- order(gene.t.tests$p.value)
+
+plot(t.idx, t.idx2)
+sum(t.idx==t.idx2)
